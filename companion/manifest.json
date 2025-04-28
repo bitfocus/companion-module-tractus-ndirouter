@@ -1,5 +1,5 @@
 {
-	"id": "tractus-ndi-router-control",
+	"id": "tractus-ndirouter",
 	"name": "tractus-ndi-router-control",
 	"shortname": "Router for NDI",
 	"description": "Companion module to control the Tractus Router for NDI application.",
@@ -22,5 +22,5 @@
 	"legacyIds": [],
 	"manufacturer": "Tractus Events",
 	"products": ["Tractus Router for NDI"],
-	"keywords": []
+	"keywords": ["NDI"]
 }
