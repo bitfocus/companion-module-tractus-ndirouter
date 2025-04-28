@@ -1,7 +1,7 @@
 {
 	"id": "tractus-ndi-router-control",
 	"name": "tractus-ndi-router-control",
-	"shortname": "tractus-ndi-router-control",
+	"shortname": "Router for NDI",
 	"description": "Companion module to control the Tractus Router for NDI application.",
 	"version": "0.0.0",
 	"license": "MIT",

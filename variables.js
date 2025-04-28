@@ -1,12 +1,14 @@
 module.exports = async function (self) {
 
-
-
-
-	self.setVariableDefinitions(self.state.slots.map(o => ({
+    let allVariables = [...self.state.slots.map(o => ({
+        variableId: `slot_${o.code}_locked`,
+        name: `Slot ${o.slotName} Lock Status`
+    })), ...self.state.slots.map(o => ({
         variableId: `slot_${o.code}`,
         name: `Slot ${o.slotName} Source`
-    })));
+    }))]
+
+	self.setVariableDefinitions(allVariables);
 
     let values = {};
 
@@ -15,6 +17,7 @@ module.exports = async function (self) {
         let o = self.state.slots[i];
 
         values[`slot_${o.code}`] = o.sourceName;
+        values[`slot_${o.code}_locked`] = o.isLocked;
     }
 
     self.setVariableValues(values);

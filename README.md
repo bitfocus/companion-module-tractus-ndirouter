@@ -1,3 +1,4 @@
-# companion-module-[replace with module name]
+# companion-module-tractus-ndirouter
 
 See [HELP.md](./companion/HELP.md) and [LICENSE](./LICENSE)
+
