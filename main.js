@@ -3,7 +3,7 @@ const UpgradeScripts = require('./upgrades')
 const UpdateActions = require('./actions')
 const UpdateFeedbacks = require('./feedbacks')
 const UpdateVariableDefinitions = require('./variables')
-const SignalR = require('@microsoft/signalr')
+const { EventSource } = require('eventsource');
 
 class ModuleInstance extends InstanceBase {
 	constructor(internal) {
@@ -20,10 +20,11 @@ class ModuleInstance extends InstanceBase {
 
         try {
             await this.fetchLatestState();
-            await this.setupSignalR();
+            await this.setupEventHub();
             this.updatePresets();
             didInitOK = true;
         } catch(ex) {
+            console.error("Error on startup - ", ex);
             didInitOK = false;
         }
 
@@ -38,22 +39,30 @@ class ModuleInstance extends InstanceBase {
 
 	}
 
-    async setupSignalR() {
-        let hub = new SignalR.HubConnectionBuilder()
-            .withUrl(`http://${this.config.host}:${this.config.port}/ws`)
-            .build();
+    onEventBusOpen(e) {
+        this.updateStatus(InstanceStatus.Ok)
+    }
 
-        await hub.start();
+    onEventBusError(e) {
+        this.updateStatus(InstanceStatus.ConnectionFailure)
+        console.error(e);
+    }
 
-        hub.on("Reset", () => this.fetchStateAndUpdateFeedback());
-        hub.on('RouteChange', () => this.fetchStateAndUpdateFeedback());
-        hub.on('RouteRenamed', () => this.fetchStateAndUpdateFeedback());
-        hub.on('RouteDeleted', () => this.fetchStateAndUpdateFeedback());
-        hub.on('RouteAdded', () => this.fetchStateAndUpdateFeedback());
-        hub.on('RouteLockStateChange', () => this.fetchStateAndUpdateFeedback());
-        hub.on('NewNdiSource', () => this.handleNdiSourceDiscovered());
+    async setupEventHub() {
 
+        
+        let hub = new EventSource(`http://${this.config.host}:${this.config.port}/eventbus`);
+        hub.onerror = (e) => this.onEventBusError(e);
+        hub.onopen = (e) => this.onEventBusOpen(e);                
+        hub.addEventListener("RouteChange", () => this.fetchStateAndUpdateFeedback());
+        hub.addEventListener('NewNdiSource', () =>  this.fetchStateAndUpdateFeedback());
+        hub.addEventListener('RouteAdded', () => this.fetchStateAndUpdateFeedback());
+        hub.addEventListener('RouteDeleted', () => this.fetchStateAndUpdateFeedback());
+        hub.addEventListener('RouteRenamed', () => this.fetchStateAndUpdateFeedback());
+        hub.addEventListener('RouteLockStateChange', () => this.fetchStateAndUpdateFeedback());
+        hub.addEventListener('Reset', () => this.fetchStateAndUpdateFeedback());
         this.hub = hub;
+
     }
 
     async handleNdiSourceDiscovered(e) {
@@ -63,7 +72,6 @@ class ModuleInstance extends InstanceBase {
 
     async fetchStateAndUpdateFeedback(e) {
         try {
-            console.warn("TESTING")
             await this.fetchLatestState();
             console.log("Got latest state. Now update feedback.");
             this.updateVariableDefinitions();
@@ -99,7 +107,10 @@ class ModuleInstance extends InstanceBase {
 	async destroy() {
         if(this.hub) {
             try {
-                await this.hub.stop();
+                this.hub.onerror = null;
+                this.hub.onopen = null;                
+                this.hub.close();
+                this.hub = null;
             } catch {
 
             }

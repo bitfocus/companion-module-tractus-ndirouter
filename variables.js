@@ -7,6 +7,7 @@ module.exports = async function (self) {
         variableId: `slot_${o.code}`,
         name: `Slot ${o.slotName} Source`
     }))]
+    
 
 	self.setVariableDefinitions(allVariables);
 
