@@ -12,11 +12,11 @@
 		"url": "git+https://github.com/eliaspuurunen/tractus-ndi-router-control.git"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.11.0",
+		"@companion-module/base": "~1.11.3",
 		"eventsource": "^4.0.0"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^1.4.2"
+		"@companion-module/tools": "^2.3.0"
 	},
     "engines": {
         "node": "22"
