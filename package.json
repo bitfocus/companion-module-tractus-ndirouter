@@ -18,5 +18,8 @@
 	"devDependencies": {
 		"@companion-module/tools": "^1.4.2"
 	},
+    "engines": {
+        "node": "22"
+    },
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }
