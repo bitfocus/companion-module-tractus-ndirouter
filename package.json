@@ -16,7 +16,7 @@
 		"eventsource": "^4.0.0"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.3.0"
+		"@companion-module/tools": "^2.6.1"
 	},
     "engines": {
         "node": "22"
