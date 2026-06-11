@@ -8,6 +8,8 @@ Use this module to send command to Tractus Router for NDI.
 - Set NDI source on slot
 - Clear slot assignment
 - Refresh slot/source list
+- Custom Router Slot Code fields support Companion variables, including button-scoped Local Variables
+- Custom NDI Source Name fields support Companion variables, including button-scoped Local Variables
 
 ### Feedbacks
 - Slot is currently assigned to source

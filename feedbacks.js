@@ -3,6 +3,31 @@ const { combineRgb } = require('@companion-module/base')
 module.exports = async function (self) {
     const slots = self.state.slots || [];
     const sources = self.state.sources || [];
+    const slotChoices = [{ id: '', label: '(Use Custom Slot Code)' }, ...slots.map(o => ({
+        id: o.code,
+        label: `${o.slotName} (${o.code})`
+    }))];
+    const sourceChoices = [{ id: '', label: '(Use Custom Source Name)' }, ...sources.map(o => ({
+        id: o.name,
+        label: `${o.name}`
+    }))];
+
+    const parseOptionText = async (context, value) => {
+        const text = String(value || '');
+        if(!text || !context?.parseVariablesInString) {
+            return text.trim();
+        }
+
+        return String(await context.parseVariablesInString(text)).trim();
+    };
+
+    const getSlotCode = async (feedback, context) => {
+        return feedback.options.slot || await parseOptionText(context, feedback.options.slotCode);
+    };
+
+    const getSourceName = async (feedback, context) => {
+        return feedback.options.sourcedd || await parseOptionText(context, feedback.options.sourcename);
+    };
     
 	self.setFeedbackDefinitions({
         RouterConnectionState: {
@@ -44,31 +69,33 @@ module.exports = async function (self) {
                     type: 'dropdown',
                     label: 'Router Slot',
                     default: '',
-                    choices: slots.map(o => ({
-                        id: o.code,
-                        label: `${o.slotName} (${o.code})`
-                    }))
+                    choices: slotChoices
+                },
+                {
+                    id: 'slotCode',
+                    type: 'textinput',
+                    label: 'Custom Router Slot Code',
+                    default: '',
+                    useVariables: { local: true },
                 },
                 {
                     id: 'sourcedd',
                     type: 'dropdown',
                     label: 'NDI Source',
                     default: '',
-                    choices: [{id: '', label: '(Use Custom Source Name)'}, ...sources.map(o => ({
-                        id: o.name,
-                        label: `${o.name}`
-                    }))]
+                    choices: sourceChoices
                 },
 				{
 					id: 'sourcename',
 					type: 'textinput',
 					label: 'Custom NDI Source Name',
-					default: ''
+					default: '',
+                    useVariables: { local: true },
 				},
 			],
-			callback: (feedback) => {
-                let slotCode = feedback.options.slot;
-                let sourceName = feedback.options.sourcedd || feedback.options.sourcename;
+			callback: async (feedback, context) => {
+                let slotCode = await getSlotCode(feedback, context);
+                let sourceName = await getSourceName(feedback, context);
 
                 if(!slotCode || !sourceName) {
                     return false;
@@ -97,14 +124,18 @@ module.exports = async function (self) {
                     type: 'dropdown',
                     label: 'Router Slot',
                     default: '',
-                    choices: slots.map(o => ({
-                        id: o.code,
-                        label: `${o.slotName} (${o.code})`
-                    }))
-                }
+                    choices: slotChoices
+                },
+                {
+                    id: 'slotCode',
+                    type: 'textinput',
+                    label: 'Custom Router Slot Code',
+                    default: '',
+                    useVariables: { local: true },
+                },
 			],
-			callback: (feedback) => {
-                let slotCode = feedback.options.slot;
+			callback: async (feedback, context) => {
+                let slotCode = await getSlotCode(feedback, context);
                 if(!slotCode) {
                     return false;
                 }
