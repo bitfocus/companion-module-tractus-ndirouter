@@ -12,7 +12,7 @@ class ModuleInstance extends InstanceBase {
 
 	async init(config) {
 		this.config = config;
-        this.state = {};
+        this.state = this.getDefaultState();
 
         this.updateStatus(InstanceStatus.Connecting);
 
@@ -40,29 +40,56 @@ class ModuleInstance extends InstanceBase {
 	}
 
     onEventBusOpen(e) {
+        this.state.connectionOk = true;
         this.updateStatus(InstanceStatus.Ok)
+        this.updateVariableDefinitions();
+        this.checkFeedbacks();
     }
 
     onEventBusError(e) {
+        this.state.connectionOk = false;
         this.updateStatus(InstanceStatus.ConnectionFailure)
+        this.updateVariableDefinitions();
+        this.checkFeedbacks();
         console.error(e);
     }
 
     async setupEventHub() {
-
+        if(this.hub) {
+            try {
+                this.hub.onerror = null;
+                this.hub.onopen = null;
+                this.hub.close();
+            } catch {
+            }
+        }
         
         let hub = new EventSource(`http://${this.config.host}:${this.config.port}/eventbus`);
         hub.onerror = (e) => this.onEventBusError(e);
         hub.onopen = (e) => this.onEventBusOpen(e);                
         hub.addEventListener("RouteChange", () => this.fetchStateAndUpdateFeedback());
-        hub.addEventListener('NewNdiSource', () =>  this.fetchStateAndUpdateFeedback());
+        hub.addEventListener('SourcesChanged', () =>  this.handleNdiSourceDiscovered());
+        hub.addEventListener('NewNdiSource', () =>  this.handleNdiSourceDiscovered());
         hub.addEventListener('RouteAdded', () => this.fetchStateAndUpdateFeedback());
         hub.addEventListener('RouteDeleted', () => this.fetchStateAndUpdateFeedback());
         hub.addEventListener('RouteRenamed', () => this.fetchStateAndUpdateFeedback());
         hub.addEventListener('RouteLockStateChange', () => this.fetchStateAndUpdateFeedback());
+        hub.addEventListener('RouteGroupsUpdated', () => this.fetchStateAndUpdateFeedback());
         hub.addEventListener('Reset', () => this.fetchStateAndUpdateFeedback());
         this.hub = hub;
 
+    }
+
+    getDefaultState() {
+        return {
+            connectionOk: false,
+            sources: [],
+            slots: [],
+            machineName: {
+                real: '',
+                override: ''
+            }
+        };
     }
 
     async handleNdiSourceDiscovered(e) {
@@ -74,9 +101,16 @@ class ModuleInstance extends InstanceBase {
         try {
             await this.fetchLatestState();
             console.log("Got latest state. Now update feedback.");
+            this.updateActions();
+            this.updateFeedbacks();
             this.updateVariableDefinitions();
+            this.updatePresets();
             this.checkFeedbacks();
         } catch(ex) {
+            this.state.connectionOk = false;
+            this.updateStatus(InstanceStatus.ConnectionFailure);
+            this.updateVariableDefinitions();
+            this.checkFeedbacks();
             console.error("Exception: ", ex);
         }
     }
@@ -85,22 +119,40 @@ class ModuleInstance extends InstanceBase {
         this.log("info", this.config.host);
         this.state.sources = await this.get('sources');
         this.state.slots = await this.get('slots');
+        this.state.machineName = await this.get('machinename');
+        this.state.connectionOk = true;
+        this.updateStatus(InstanceStatus.Ok);
     }
 
     async get(route) {
         let resultRaw = await fetch(`http://${this.config.host}:${this.config.port}/${route}`);
-        let result = resultRaw.json();
-
-        return result;
+        return await this.parseResponse(resultRaw, route);
     }
 
     async put(route) {
         let resultRaw = await fetch(`http://${this.config.host}:${this.config.port}/${route}`, {
             method: 'put'
         });
-        let result = resultRaw.json();
 
-        return result;
+        return await this.parseResponse(resultRaw, route);
+    }
+
+    async parseResponse(response, route) {
+        const body = await response.text();
+
+        if(!response.ok) {
+            throw new Error(`${route} returned ${response.status} ${response.statusText}${body ? `: ${body}` : ''}`);
+        }
+
+        if(!body) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(body);
+        } catch {
+            return body;
+        }
     }
 
 	// When module gets deleted
@@ -121,6 +173,21 @@ class ModuleInstance extends InstanceBase {
 
 	async configUpdated(config) {
 		this.config = config;
+        this.state = this.getDefaultState();
+        this.updateStatus(InstanceStatus.Connecting);
+        try {
+            await this.fetchLatestState();
+            await this.setupEventHub();
+            this.updateActions();
+            this.updateFeedbacks();
+            this.updateVariableDefinitions();
+            this.updatePresets();
+            this.checkFeedbacks();
+        } catch(ex) {
+            this.state.connectionOk = false;
+            this.updateStatus(InstanceStatus.ConnectionFailure);
+            console.error("Error after config update - ", ex);
+        }
 	}
 
 	// Return config fields for web config
@@ -150,7 +217,7 @@ class ModuleInstance extends InstanceBase {
 
         if(this.state && this.state.sources) {
             try {
-                this.state.slots.forEach((slot) => {
+                (this.state.slots || []).forEach((slot) => {
 
                     let toAdd = {
                         type: 'button',
@@ -255,7 +322,7 @@ class ModuleInstance extends InstanceBase {
                 });
 
 
-                this.state.sources.forEach((source) => {
+                (this.state.sources || []).forEach((source) => {
 
                     let toAdd = {
                         type: 'button',

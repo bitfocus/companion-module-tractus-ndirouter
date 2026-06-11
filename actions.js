@@ -1,5 +1,16 @@
 module.exports = function (self) {
+    const slots = self.state.slots || [];
+    const sources = self.state.sources || [];
+
 	self.setActionDefinitions({
+        refresh_state: {
+            name: 'Refresh Slot/Source List',
+            options: [],
+            callback: async () => {
+                await self.fetchStateAndUpdateFeedback();
+            },
+        },
+
 		set_slot_output: {
 			name: 'Set Slot Source',
 			options: [
@@ -8,7 +19,7 @@ module.exports = function (self) {
                     type: 'dropdown',
                     label: 'NDI Source',
                     default: '',
-                    choices: [{id: '', label: '(Use Custom Source Name)'}, ...self.state.sources.map(o => ({
+                    choices: [{id: '', label: '(Use Custom Source Name)'}, ...sources.map(o => ({
                         id: o.name,
                         label: `${o.name}`
                     }))]
@@ -26,7 +37,7 @@ module.exports = function (self) {
                     type: 'dropdown',
                     label: 'Router Slot',
                     default: '',
-                    choices: self.state.slots.map(o => ({
+                    choices: slots.map(o => ({
                         id: o.code,
                         label: `${o.slotName} (${o.code})`
                     }))
@@ -38,7 +49,12 @@ module.exports = function (self) {
                     src = event.options.source;
                 }
 
-                await self.put(`slots/${event.options.slot}/set/${src}`);
+                if(!event.options.slot || !src) {
+                    return;
+                }
+
+                await self.put(`slots/${event.options.slot}/set/${encodeURIComponent(src)}`);
+                await self.fetchStateAndUpdateFeedback();
 			},
 		},
 
@@ -50,14 +66,19 @@ module.exports = function (self) {
                     type: 'dropdown',
                     label: 'Router Slot',
                     default: '',
-                    choices: self.state.slots.map(o => ({
+                    choices: slots.map(o => ({
                         id: o.code,
                         label: `${o.slotName} (${o.code})`
                     }))
                 }
 			],
 			callback: async (event) => {
+                if(!event.options.slot) {
+                    return;
+                }
+
                 await self.put(`slots/lock/${event.options.slot}`);
+                await self.fetchStateAndUpdateFeedback();
 			},
 		},
 
@@ -69,14 +90,19 @@ module.exports = function (self) {
                     type: 'dropdown',
                     label: 'Router Slot',
                     default: '',
-                    choices: self.state.slots.map(o => ({
+                    choices: slots.map(o => ({
                         id: o.code,
                         label: `${o.slotName} (${o.code})`
                     }))
                 }
 			],
 			callback: async (event) => {
+                if(!event.options.slot) {
+                    return;
+                }
+
                 await self.put(`slots/unlock/${event.options.slot}`);
+                await self.fetchStateAndUpdateFeedback();
 			},
 		},
 
@@ -90,14 +116,19 @@ module.exports = function (self) {
                     type: 'dropdown',
                     label: 'Router Slot',
                     default: '',
-                    choices: self.state.slots.map(o => ({
+                    choices: slots.map(o => ({
                         id: o.code,
                         label: `${o.slotName} (${o.code})`
                     }))
                 }
 			],
 			callback: async (event) => {
+                if(!event.options.slot) {
+                    return;
+                }
+
                 await self.put(`slots/${event.options.slot}/clear`);
+                await self.fetchStateAndUpdateFeedback();
 			},            
         },
 	})

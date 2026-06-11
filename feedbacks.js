@@ -1,8 +1,35 @@
 const { combineRgb } = require('@companion-module/base')
 
 module.exports = async function (self) {
+    const slots = self.state.slots || [];
+    const sources = self.state.sources || [];
     
 	self.setFeedbackDefinitions({
+        RouterConnectionState: {
+            name: 'Router Connection Online/Offline',
+            type: 'boolean',
+            label: 'Router Connection State',
+            defaultStyle: {
+                bgcolor: combineRgb(0, 120, 0),
+                color: combineRgb(255, 255, 255),
+            },
+            options: [
+                {
+                    id: 'state',
+                    type: 'dropdown',
+                    label: 'State',
+                    default: 'online',
+                    choices: [
+                        { id: 'online', label: 'Online' },
+                        { id: 'offline', label: 'Offline' },
+                    ],
+                },
+            ],
+            callback: (feedback) => {
+                const online = self.state.connectionOk === true;
+                return feedback.options.state === 'offline' ? !online : online;
+            },
+        },
 		SlotSource: {
 			name: 'Source is Assigned to Slot',
 			type: 'boolean',
@@ -17,7 +44,7 @@ module.exports = async function (self) {
                     type: 'dropdown',
                     label: 'Router Slot',
                     default: '',
-                    choices: self.state.slots.map(o => ({
+                    choices: slots.map(o => ({
                         id: o.code,
                         label: `${o.slotName} (${o.code})`
                     }))
@@ -27,7 +54,7 @@ module.exports = async function (self) {
                     type: 'dropdown',
                     label: 'NDI Source',
                     default: '',
-                    choices: [{id: '', label: '(Use Custom Source Name)'}, ...self.state.sources.map(o => ({
+                    choices: [{id: '', label: '(Use Custom Source Name)'}, ...sources.map(o => ({
                         id: o.name,
                         label: `${o.name}`
                     }))]
@@ -40,10 +67,6 @@ module.exports = async function (self) {
 				},
 			],
 			callback: (feedback) => {
-                console.log(feedback);
-				self.log('info', 'Feedback callback!', feedback, feedback.options.sourcedd, feedback.options.sourcename, feedback.options.slot)
-
-
                 let slotCode = feedback.options.slot;
                 let sourceName = feedback.options.sourcedd || feedback.options.sourcename;
 
@@ -74,16 +97,13 @@ module.exports = async function (self) {
                     type: 'dropdown',
                     label: 'Router Slot',
                     default: '',
-                    choices: self.state.slots.map(o => ({
+                    choices: slots.map(o => ({
                         id: o.code,
                         label: `${o.slotName} (${o.code})`
                     }))
                 }
 			],
 			callback: (feedback) => {
-				self.log('info', 'Feedback callback!', feedback,feedback.options.slot)
-
-
                 let slotCode = feedback.options.slot;
                 if(!slotCode) {
                     return false;
